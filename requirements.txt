@@ -1,0 +1,7 @@
+hgq2==0.14
+da4ml==0.5.0beta1
+hls4ml==1.2.0
+jax
+pandas
+ipykernel
+lxml

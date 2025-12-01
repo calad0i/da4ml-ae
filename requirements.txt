@@ -1,5 +1,5 @@
-hgq2==0.14
-da4ml==0.5.0beta1
+hgq2==0.1.4
+da4ml==0.5.0beta2
 hls4ml==1.2.0
 jax
 pandas

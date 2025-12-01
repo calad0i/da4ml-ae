@@ -1,45 +1,17 @@
-# da4ml results reproduction instructions
+# ==============================================
+# Global configurations
+# ==============================================
 
-This repository contains code and instructions to reproduce the major results reported in the [da4ml paper](https://dl.acm.org/doi/10.1145/3777387).
-
-
-## Requirements
-
-- `python>=3.10` (`3.11+` recommended)
-- `gnu make` and `g++` for building
-- Reasonably modern linux system (e.g., OpenSUSE Leap 16) with reasonable amount of RAM (At least 32GB+)
-- `Vivado 2023.2` with license for synthesis and implementation for `xcvu13p-flga2577-2-e`
-- Optional, but strongly recommended: `gnu_parallel` for parallel execution (usually available via package manager)
-
-For python dependencies, you may use (with [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html)):
-
-```bash
-micromamba create -n da4ml-ae -f env.yml
-micromamba activate da4ml-ae
-```
-
-## Instruction for each result
-
-You may execute all experiments in sequence by running:
-
-```bash
-source run_all.sh
-```
-
-Comment out the parts (e.g., MLP-Mixer through HLS which is slow) that you wish to skip.
-Due to hls4ml updates, some results vary slightly from the paper.
-
-### Microbenchmarks
-
-#### Table 2
-
-Run `table2.ipynb`, and the results will be generated at cell 15.
-
-#### Table 3, 4
-
-```bash
 export WORKING_DIR_RANDMAT=prjs/rand_mat # example path, edit as needed
 export N_PROC=4 # Number of parallel instances for synthesis, set according to your system capabilities
+
+# ==============================================
+# Run all experiments
+# ==============================================
+
+#---------------------------------
+# Random Matrices (Tables 3 and 4)
+#---------------------------------
 
 # Convert the random matrices, enforcing a latency of one clock cycle for measuring combinational delay
 ./convert_rand_mat.sh $WORKING_DIR_RANDMAT
@@ -53,13 +25,10 @@ python report_hls.py $WORKING_DIR_RANDMAT/*bw=8* -s N dc -c dc N LUT DSP FF 'Lat
 echo Table 4:
 python report_hls.py $WORKING_DIR_RANDMAT/*bw=4* -s N dc -c dc N LUT DSP FF 'Latency [ns]'
 
-```
+#-------------------------------------
+# JSC Models (Tables 5, 6, 10, and 11)
+#-------------------------------------
 
-### Realistic Networks
-
-#### Table 5, 6, 10, 11
-
-```bash
 export WORKING_DIR_JSC_OPENML=prjs/jsc_openml
 
 # Convert with targets of 200MHz and 1GHz
@@ -74,12 +43,7 @@ echo Table 5
 python report_hls.py $WORKING_DIR_JSC_OPENML/period=5/* -s _test_acc -c use_da test_acc Latency 'Latency [ns]' LUT DSP FF 'Fmax [MHz]'
 echo Table 6
 python report_hls.py $WORKING_DIR_JSC_OPENML/period=1/* -s _test_acc -c use_da test_acc Latency 'Latency [ns]' LUT DSP FF 'Fmax [MHz]'
-```
 
-For the RTL results in tables 10 and 11, run in addition:
-
-```bash
-# Run Vivado OOC P&R
 ls -d $WORKING_DIR_JSC_OPENML/rtl-period=*/* | parallel --bar -j $N_PROC 'cd {} && vivado -mode batch -source build_vivado_prj.tcl > synth.log'
 
 # Print reports for RTL models in tables 10 and 11
@@ -87,14 +51,11 @@ echo Table 10-RTL:
 da4ml report $WORKING_DIR_JSC_OPENML/rtl-period=5/* -c test_acc latency 'latency(ns)' LUT DSP FF 'Fmax(MHz)'
 echo Table 11-RTL:
 da4ml report $WORKING_DIR_JSC_OPENML/rtl-period=1/* -c test_acc latency 'latency(ns)' LUT DSP FF 'Fmax(MHz)'
-```
 
-#### Table 9, 12
+#---------------------------------
+# MLP-Mixer (Tables 9 and 12)
+#---------------------------------
 
-> WARNING: this synthesis may be very slow and require a large amount of RAM (~100GB). Skip this part if not strongly needed. The same model's RTL version (table 12) is much less demanding.
-
-```bash
-# example path, edit as needed
 export WORKING_DIR_MLPM=prjs/mlp-mixer
 
 # Convert with target frequency of 200MHz
@@ -106,23 +67,19 @@ ls -d $WORKING_DIR_MLPM/period=5/* | parallel --bar -j $N_PROC 'cd {} && singula
 # Print reports for table 9
 echo Table 9
 python report_hls.py $WORKING_DIR_MLPM/period=5/* -s _test_acc -c use_da test_acc Latency 'Latency [ns]' LUT DSP FF 'Fmax [MHz]'
-```
 
-For the RTL results in table 12, run in addition:
 
-```bash
-# Run Vivado OOC P&R
 ls -d $WORKING_DIR_MLPM/rtl-period=5/* | parallel --bar -j $N_PROC 'cd {} && vivado -mode batch -source build_vivado_prj.tcl > synth.log'
 
 # Print reports for RTL models in table 12
 echo Table 12-RTL
 da4ml report $WORKING_DIR_MLPM/rtl-period=5/* -c test_acc latency 'latency(ns)' LUT DSP FF 'Fmax(MHz)'
-```
 
-#### Table 13, High-level feature jet tagging network (CERN Box)
 
-```bash
-# example path, edit as needed
+#---------------------------------
+# JSC CERNBox (from Table 13)
+#---------------------------------
+
 export WORKING_DIR_CERNBOX=prjs/jsc_cernbox
 
 # Convert with target frequency of 1GHz
@@ -132,11 +89,5 @@ export WORKING_DIR_CERNBOX=prjs/jsc_cernbox
 ls -d $WORKING_DIR_CERNBOX/rtl-period=1/* | parallel --bar -j $N_PROC 'cd {} && vivado -mode batch -source build_vivado_prj.tcl > synth.log'
 
 # Print reports for RTL models in table 13
-echo CERNBox Table 13:
+echo CERNBox Table 13
 da4ml report $WORKING_DIR_CERNBOX/rtl-period=1/* -c test_acc latency 'latency(ns)' LUT DSP FF 'Fmax(MHz)'
-```
-
-## Notes
-
-- The provided scripts and commands assume a certain directory structure and naming conventions as generated by the `da4ml` conversion scripts. Adjust paths as necessary.
-- You may use a different machine to run the synthesis and implementation steps if needed. The projects generated by da4ml or hls4ml are portable.
